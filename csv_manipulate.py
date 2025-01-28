@@ -1,11 +1,22 @@
 import csv
 import pandas as pd
 from datetime import datetime as dt
+from datetime import timedelta
 import os
 from send_email import send_email_notifications
 
 filename = "trades_made/trades_made.csv"
 manipulated_file = 'trades_made/trades_made_' + dt.now().strftime("%Y%m%d") + '.csv'
+yesterday_file = 'trades_made/trades_made_' + (dt.now() - timedelta(days=1)).strftime("%Y%m%d") + '.csv'
+
+# Determine previous days' final price
+yest_df = pd.read_csv(yesterday_file)
+yest_position = yest_df.iloc[-1]['Position']
+print(yest_df)
+print(yest_position)
+
+
+
 
 raw_df = pd.read_csv(filename)
 os.remove(filename)
@@ -52,3 +63,4 @@ for idx in range(1, len(clean_df) + 1):
 
 clean_df.to_csv(manipulated_file)
 send_email_notifications(manipulated_file)
+

@@ -189,9 +189,6 @@ def run_strategy():
 		# Step 4: Execute trading strategy
 		execute_trades(current_price, historical_data, )
 
-		# Step 5: Plot the Data
-		plot_bollinger_bands(historical_data, current_price)
-
 		# Wait before checking again
 		time.sleep(1)
 
