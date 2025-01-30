@@ -63,7 +63,7 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 	trades_df = pd.DataFrame(columns = ['DateTime', 'Ticker', 'Action', 'Amount', 'Price'])
 
 	# Check if the current price is below the lower Bollinger Band (Buy Signal)
-	if current_price < data['Lower'].iloc[-1]:
+	if current_price < data['Lower'].iloc[-1] and trade != "BUY":
 		trade = "BUY"
 		buy_amount = buying_power * cash_percent # Buy 1% of cash
 		crypto_quantity = buy_amount / current_price
@@ -84,7 +84,7 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 		print(f"BUY: Purchased { crypto_quantity } BTC at ${ current_price }")
 
 	# Check if the current price is above the upper Bollinger Band (Sell Signal)
-	if current_price > data['Upper'].iloc[-1]:
+	if current_price > data['Upper'].iloc[-1] and trade != "SELL":
 		trade = "SELL"
 		positions = r.crypto.get_crypto_positions()
 		if positions:
@@ -194,6 +194,7 @@ def run_strategy():
 
 # Run the strategy
 if __name__ == "__main__":
+	trade = None
 	try:
 		run_strategy()
 	except KeyboardInterrupt:

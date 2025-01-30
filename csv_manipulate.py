@@ -11,12 +11,10 @@ yesterday_file = 'trades_made/trades_made_' + (dt.now() - timedelta(days=1)).str
 
 # Determine previous days' final price
 yest_df = pd.read_csv(yesterday_file)
-yest_position = yest_df.iloc[-1]['Position']
-print(yest_df)
-print(yest_position)
-
-
-
+if yest_df.iloc[-1]['Position'] is not None:
+        yest_position = yest_df.iloc[-2]['Position']
+else:
+        yest_position = yest_df.iloc[-1]['Position']
 
 raw_df = pd.read_csv(filename)
 os.remove(filename)
@@ -54,7 +52,11 @@ for idx in range(1, len(clean_df) + 1):
 	clean_df.loc[idx-1, 'Time_Held'] = pd.to_datetime(clean_df.loc[idx-1, 'Sold_DateTime']) - pd.to_datetime(clean_df.loc[idx - 1, 'Bought_DateTime'])
 	clean_df.loc[idx-1, 'Delta_Quantity'] = clean_df.loc[idx-1, 'Bought_Quantity'] - clean_df.loc[idx-1, 'Sold_Quantity']
 	clean_df.loc[idx-1, 'Delta_Price'] = clean_df.loc[idx-1, 'Sold_Price'] - clean_df.loc[idx-1, 'Bought_Price']
-	clean_df.loc[idx-1, '%Change'] = clean_df.loc[idx-1, 'Delta_Price'] / clean_df.loc[idx-1, 'Bought_Price']
+
+	if clean_df.loc[idx-1, 'Delta_Price']/clean_df.loc[idx-1, 'Bought_Price'] < -.0005:
+		clean_df.loc[idx-1, '%Change'] = -.0005
+	else:
+		clean_df.loc[idx-1, '%Change'] = clean_df.loc[idx-1, 'Delta_Price'] / clean_df.loc[idx-1, 'Bought_Price']
 
 	if idx == 1:
 		clean_df.loc[idx-1, 'Position'] = 500 * ( 1 + clean_df.loc[idx-1, '%Change'])
