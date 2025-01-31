@@ -63,28 +63,35 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 	trades_df = pd.DataFrame(columns = ['DateTime', 'Ticker', 'Action', 'Amount', 'Price'])
 
 	# Check if the current price is below the lower Bollinger Band (Buy Signal)
-	if current_price < data['Lower'].iloc[-1] and trade != "BUY":
+	if (
+		current_price < data['Lower'].iloc[-1]
+		and not os.path.isfile("trades_made/trades_made.csv")
+	) or (
+		current_price < data['Lower'].iloc[-1]
+		and pd.read_csv("trades_made/trades_made.csv")['Action'].iloc[-1] != "BUY"
+	):
 		trade = "BUY"
 		buy_amount = buying_power * cash_percent # Buy 1% of cash
 		crypto_quantity = buy_amount / current_price
 		r.orders.order_buy_crypto_by_quantity("BTC", crypto_quantity)
-
-#		send_email_notifications("BTC", current_price, trade, crypto_quantity)
+		r.orders.order_sell_stop_loss("BTC", crypto_quantity, (current_price*.9995))
 
 		next_row = [[datetime.now(), "BTC", trade, crypto_quantity, current_price]]
 		next_row_df = pd.DataFrame(next_row, columns = ["DateTime", "Ticker", "Action", "Quantity", "Price"])
-###		next_row = {'DateTime': [datetime.now()], 'Ticker': ["BTC"], 'Action': [trade], 'Quantity': [crypto_quantity], 'Price': [current_price]}
-###		next_row_df = pd.DataFrame(next_row)
-#		print(next_row_df.columns)
+
 		if not os.path.isfile("trades_made/trades_made.csv"):
 			next_row_df.to_csv("trades_made/trades_made.csv", mode = "w", header = True, index = True)
 		else:
 			next_row_df.to_csv("trades_made/trades_made.csv", mode = "a", header = False, index = True)
 
-		print(f"BUY: Purchased { crypto_quantity } BTC at ${ current_price }")
-
 	# Check if the current price is above the upper Bollinger Band (Sell Signal)
-	if current_price > data['Upper'].iloc[-1] and trade != "SELL":
+	if (
+		current_price > data['Upper'].iloc[-1]
+		and not os.path.isfile("trades_made/trades_made.csv")
+	) or (
+		current_price > data['Upper'].iloc[-1]
+		and pd.read_csv("trades_made/trades_made.csv")['Action'].iloc[-1] != "SELL"
+	):
 		trade = "SELL"
 		positions = r.crypto.get_crypto_positions()
 		if positions:
@@ -93,19 +100,13 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 					quantity = float(position["Quantity"])
 					r.orders.order_sell_crypto_by_quantity("BTC", quantity)
 
-#				send_email_notifications("BTC", current_price, trade, crypto_quantity)
-
 		next_row = [[datetime.now(), "BTC", trade, 90, current_price]]
 		next_row_df = pd.DataFrame(next_row, columns = ["DateTime", "Ticker", "Action", "Quantity", "Price"])
-###		next_row = {'DateTime': [datetime.now()], 'Ticker': ["BTC"], 'Action': [trade], 'Quantity': [90], 'Price': [current_price]}
-###		next_row_df = pd.DataFrame(next_row)
-#		print(next_row_df.columns)
+
 		if not os.path.isfile("trades_made/trades_made.csv"):
 			next_row_df.to_csv("trades_made/trades_made.csv", mode = "w", header = True, index = True)
 		else:
 			next_row_df.to_csv("trades_made/trades_made.csv", mode = "a", header = False, index = True)
-
-		print(f"SELL: Sold BTC at ${ current_price }")
 
 def plot_bollinger_bands(data, current_price=None):
 	"""
@@ -159,16 +160,12 @@ def run_strategy():
 	historical_data = calculate_bollinger_bands(historical_data)
 
 	while True:
-#		print(f"Running strategy at { datetime.now() }")
-
 		# Step 1: Fetch the latest real-time price
 		current_price = get_current_price(symbol="BTC", currency="USD")
 		if current_price is None:
 			print("No current price available. Retrying...")
 			time.sleep(1)
 			continue
-
-#		print(f"Current BTC Price: $ { current_price }")
 
 		# Step 2: Update historical data with the latest price
 		new_row = {
@@ -178,7 +175,6 @@ def run_strategy():
 			"open": current_price,
 			"volumeto": 0	# Volume is optional and not used in this strategy
 			}
-#		print(next_row_df)
 		new_data = pd.DataFrame([new_row], index = [datetime.now()])
 		new_data.index = new_data.index.tz_localize('UTC')
 		historical_data = pd.concat([historical_data, new_data]).tail(200)	# Keep the last 200 rows
