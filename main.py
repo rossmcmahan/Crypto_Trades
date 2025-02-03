@@ -11,7 +11,7 @@ from send_email import send_email_notifications
 # Login to Robinhood
 username = os.getenv(config.USERNAME)
 password = os.getenv(config.PASSWORD)
-r.login(username, password)
+r.login(username, password, store_session=True)
 
 # Function to fetch historical data
 def get_historical_data(symbol = "BTC", interval = "5minute", span = "day"):
@@ -73,8 +73,13 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 		trade = "BUY"
 		buy_amount = buying_power * cash_percent # Buy 1% of cash
 		crypto_quantity = buy_amount / current_price
-		r.orders.order_buy_crypto_by_quantity("BTC", crypto_quantity)
-		r.orders.order_sell_stop_loss("BTC", crypto_quantity, (current_price*.9995))
+		r.orders.order_buy_crypto_by_price("BTC", round(buy_amount, 8))
+		positions = r.crypto.get_crypto_positions()
+		if positions:
+			for position in positions:
+				if position["currency"]["code"] == "BTC":
+					quantity = float(position["quantity"])
+					r.orders.order_sell_stop_loss("BTC", quantity, (current_price*.9995))
 
 		next_row = [[datetime.now(), "BTC", trade, crypto_quantity, current_price]]
 		next_row_df = pd.DataFrame(next_row, columns = ["DateTime", "Ticker", "Action", "Quantity", "Price"])
@@ -96,17 +101,17 @@ def execute_trades(current_price, data, cash_percent = 0.01):
 		positions = r.crypto.get_crypto_positions()
 		if positions:
 			for position in positions:
-				if positions["currency"]["code"] == "BTC":
-					quantity = float(position["Quantity"])
+				if position["currency"]["code"] == "BTC":
+					quantity = float(position["quantity"])
 					r.orders.order_sell_crypto_by_quantity("BTC", quantity)
 
-		next_row = [[datetime.now(), "BTC", trade, 90, current_price]]
-		next_row_df = pd.DataFrame(next_row, columns = ["DateTime", "Ticker", "Action", "Quantity", "Price"])
+					next_row = [[datetime.now(), "BTC", trade, 90, current_price]]
+					next_row_df = pd.DataFrame(next_row, columns = ["DateTime", "Ticker", "Action", "Quantity", "Price"])
 
-		if not os.path.isfile("trades_made/trades_made.csv"):
-			next_row_df.to_csv("trades_made/trades_made.csv", mode = "w", header = True, index = True)
-		else:
-			next_row_df.to_csv("trades_made/trades_made.csv", mode = "a", header = False, index = True)
+					if not os.path.isfile("trades_made/trades_made.csv"):
+						next_row_df.to_csv("trades_made/trades_made.csv", mode = "w", header = True, index = True)
+					else:
+						next_row_df.to_csv("trades_made/trades_made.csv", mode = "a", header = False, index = True)
 
 def plot_bollinger_bands(data, current_price=None):
 	"""
